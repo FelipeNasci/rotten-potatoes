@@ -8,7 +8,7 @@ on:
   workflow_dispatch:
 
 jobs:
-  build:
+  CI:
     runs-on: ubuntu-latest
 
     steps:
@@ -17,5 +17,37 @@ jobs:
       - name: Docker Hub Login
         uses: docker/login-action@v1.12.0
         with:
-          username: {{secrets.DOCKER_HUB_USER}}
-          password: {{secrets.DOCKER_HUB_PWD}}
+          username: ${{secrets.DOCKER_HUB_USER}}
+          password: ${{secrets.DOCKER_HUB_PWD}}
+
+      - name: Build and push Docker images
+        # You may pin to the exact commit or the version.
+        # uses: docker/build-push-action@1814d3dfb36d6f84174e61f4a4b05bd84089a4b9
+        uses: docker/build-push-action@v2.8.0
+        with:
+          context: ./src
+          file: ./src/Dockerfile
+          push: true
+          tags: |
+            felipenasci/rottem-potatoes:latest
+            felipenasci/rottem-potatoes:${{ github.run_number }} 
+            
+  CD:
+    needs: [CI]
+    runs-on: ubuntu-latest
+    
+    steps:
+      - uses: actions/checkout@v2
+      
+      - name: Kubernetes Set Context
+        uses: Azure/k8s-set-context@v2
+        with:
+          method: kubeconfig
+          kubeconfig: ${{secrets.KUBE_CONFIG}}
+          
+      - name: Deploy to Kubernetes cluster
+        uses: Azure/k8s-deploy@v1.5
+        with:
+          manifests: |
+            k8s/deployment.yaml
+          images: felipenasci/rottem-potatoes:${{ github.run_number }} 
