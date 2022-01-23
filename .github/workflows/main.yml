@@ -42,6 +42,12 @@ jobs:
       - name: Kubernetes Set Context
         uses: Azure/k8s-set-context@v2
         with:
-
           method: kubeconfig
           kubeconfig: ${{secrets.KUBE_CONFIG}}
+          
+      - name: Deploy to Kubernetes cluster
+        uses: Azure/k8s-deploy@v1.5
+        with:
+          manifests: |
+            k8s/deployment.yaml
+          images: felipenasci/rottem-potatoes:${{ github.run_number }} 
